@@ -39,12 +39,19 @@ public class MoodleClient {
     }
 
     public String getUsersCourses(String token, String userid) {
+        HttpUrl url = new HttpUrl.Builder()
+                .scheme("https")
+                .host(moodleUrl)
+                .addPathSegment("webservice")
+                .addPathSegment("rest")
+                .addPathSegment("server.php")
+                .addQueryParameter("wstoken", token)
+                .addQueryParameter("wsfunction", "core_enrol_get_users_courses")
+                .addQueryParameter("moodlewsrestformat", "json")
+                .build();
+
         var request = new Request.Builder()
-                .url(moodleUrl)
-                .addHeader("wstoken", token)
-                .addHeader("wsfunction", "core_enrol_get_users_courses")
-                .addHeader("userid", userid)
-                .addHeader("moodlewsrestformat", "json")
+                .url(url)
                 .build();
 
         try (var da = client.newCall(request).execute()) {
