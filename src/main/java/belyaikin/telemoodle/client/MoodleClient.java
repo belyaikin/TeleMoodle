@@ -47,6 +47,7 @@ public class MoodleClient {
                 .addPathSegment("server.php")
                 .addQueryParameter("wstoken", token)
                 .addQueryParameter("wsfunction", "core_enrol_get_users_courses")
+                .addQueryParameter("userid", userid)
                 .addQueryParameter("moodlewsrestformat", "json")
                 .build();
 
