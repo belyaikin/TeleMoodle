@@ -2,21 +2,26 @@ package belyaikin.telemoodle.bot;
 
 import belyaikin.telemoodle.TeleMoodleApplication;
 import belyaikin.telemoodle.model.User;
+import belyaikin.telemoodle.model.moodle.MoodleCourse;
 import belyaikin.telemoodle.model.moodle.MoodleUser;
 import belyaikin.telemoodle.service.MoodleService;
 import belyaikin.telemoodle.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.util.List;
+
 @Component
 public class Bot extends TelegramLongPollingBot {
     @Autowired private UserService userService;
     @Autowired private MoodleService moodleService;
+
 
     public Bot(@Value("${bot.token}") String botToken) {
         super(botToken);
@@ -32,7 +37,7 @@ public class Bot extends TelegramLongPollingBot {
 
         if (!userService.isUserRegistered(update.getMessage().getFrom().getId())) {
             // TODO: make better check
-            if (message.length() < 32) {
+            if (message.length() < 32 || message.length() > 32) {
                 sendMessage(chatId,
                         "Please send me a valid Moodle security key."
                 );
@@ -51,16 +56,25 @@ public class Bot extends TelegramLongPollingBot {
             return;
         }
 
-        String token = userService.getByTelegramId(userId).getMoodleToken();
-        MoodleUser user = moodleService.getMoodleUser(token);
+        if(message.equals("My courses")) {
+            String token = userService.getByTelegramId(userId).getMoodleToken();
+            MoodleUser user = moodleService.getMoodleUser(token);
 
-        sendMessage(chatId,
-                "Hello, " + user.getFirstName() + "!"
-        );
-        sendMessage(chatId,
-                "Your courses: " +
-                        moodleService.getMoodleCourses(token, String.valueOf(user.getUserId()))
-        );
+            List<MoodleCourse> courses = moodleService.getMoodleCourses(token, String.valueOf(user.getUserId()));
+
+            StringBuilder coursesList = new StringBuilder("Your courses:\n\n");
+            for (int i = 0; i < courses.size(); i++) {
+                MoodleCourse course = courses.get(i);
+                coursesList.append(i + 1).append(". ").append(course.getName()).append("\n");
+            }
+
+            sendMessage(chatId, coursesList.toString());
+            return;
+        }
+
+        sendMessage(chatId, "Write a `My courses` to see your courses");
+
+
     }
 
     @Override
