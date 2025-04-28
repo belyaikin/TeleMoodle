@@ -1,0 +1,47 @@
+package belyaikin.telemoodle.service;
+
+import belyaikin.telemoodle.client.MoodleClient;
+import belyaikin.telemoodle.model.moodle.MoodleCourse;
+import belyaikin.telemoodle.model.moodle.MoodleUser;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+public class MoodleService {
+    @Autowired
+    private MoodleClient client;
+
+    public MoodleUser getMoodleUser(String token) {
+        JSONObject json = new JSONObject(client.getSiteInfo(token));
+        MoodleUser user = new MoodleUser();
+
+        user.setUserId(json.getInt("userid"));
+        user.setFirstName(json.getString("firstname"));
+        user.setLastName(json.getString("lastname"));
+
+        return user;
+    }
+
+    public List<MoodleCourse> getMoodleCourses(String token, String userid) {
+        JSONArray array = new JSONArray(client.getUsersCourses(token, userid));
+
+        List<MoodleCourse> courses = new ArrayList<>();
+
+        for (int i = 0; i < array.length(); i++) {
+            JSONObject jsonObject = array.getJSONObject(i);
+            MoodleCourse course = new MoodleCourse();
+
+            course.setId(jsonObject.getInt("id"));
+            course.setName(jsonObject.getString("shortname"));
+
+            courses.add(course);
+        }
+
+        return courses;
+    }
+}
