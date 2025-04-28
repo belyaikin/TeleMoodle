@@ -13,8 +13,11 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -29,52 +32,63 @@ public class Bot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        if (!update.hasMessage() || !update.getMessage().hasText()) return;
+        if (update.hasMessage() && update.getMessage().hasText()) {
+            String message = update.getMessage().getText();
+            long chatId = update.getMessage().getChatId();
 
-        String message = update.getMessage().getText();
-        long chatId = update.getMessage().getChatId();
-        long userId = update.getMessage().getFrom().getId();
+            System.out.println("Message received: " + message);
 
-        if (!userService.isUserRegistered(update.getMessage().getFrom().getId())) {
-            // TODO: make better check
-            if (message.length() < 32 || message.length() > 32) {
-                sendMessage(chatId,
-                        "Please send me a valid Moodle security key."
-                );
-                return;
-            }
-            User user = new User();
-            user.setTelegramId(userId);
-            user.setMoodleToken(message);
+            if (message.equals("/start")) {
+                SendMessage msg = new SendMessage();
+                msg.setChatId(String.valueOf(chatId));
+                msg.setText("Choose an option:");
 
-            userService.create(user);
+                InlineKeyboardButton btn1 = new InlineKeyboardButton();
+                btn1.setText("All Courses");
+                btn1.setCallbackData("all_courses");
 
-            sendMessage(chatId,
-                    "Welcome to the MiniMoodle! Feel yourself like at home :)"
-            );
+                List<InlineKeyboardButton> row = new ArrayList<>();
+                row.add(btn1);
 
-            return;
-        }
+                List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+                rows.add(row);
 
-        if(message.equals("My courses")) {
-            String token = userService.getByTelegramId(userId).getMoodleToken();
-            MoodleUser user = moodleService.getMoodleUser(token);
+                InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+                markup.setKeyboard(rows);
 
-            List<MoodleCourse> courses = moodleService.getMoodleCourses(token, String.valueOf(user.getUserId()));
+                msg.setReplyMarkup(markup);
 
-            StringBuilder coursesList = new StringBuilder("Your courses:\n\n");
-            for (int i = 0; i < courses.size(); i++) {
-                MoodleCourse course = courses.get(i);
-                coursesList.append(i + 1).append(". ").append(course.getName()).append("\n");
+                try {
+                    execute(msg);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
             }
 
-            sendMessage(chatId, coursesList.toString());
-            return;
+        } else if (update.hasCallbackQuery()) {
+            String callbackData = update.getCallbackQuery().getData();
+            long chatIdCallback = update.getCallbackQuery().getMessage().getChatId();
+
+            System.out.println("Callback received: " + callbackData);
+
+            if ("all_courses".equals(callbackData)) {
+                long userIdCallback = update.getCallbackQuery().getFrom().getId();
+                String token = userService.getByTelegramId(userIdCallback).getMoodleToken();
+                MoodleUser user = moodleService.getMoodleUser(token);
+
+                List<MoodleCourse> courses = moodleService.getMoodleCourses(token, String.valueOf(user.getUserId()));
+
+                StringBuilder coursesList = new StringBuilder("Here are all your courses:\n\n");
+                for (int i = 0; i < courses.size(); i++) {
+                    MoodleCourse course = courses.get(i);
+                    coursesList.append(i + 1).append(". ").append(course.getName()).append("\n");
+                }
+
+                sendMessage(chatIdCallback, coursesList.toString());
+            }
+        } else {
+            sendMessage(update.getMessage().getChatId(), "Please try again.");
         }
-
-        sendMessage(chatId, "Write a `My courses` to see your courses");
-
-
     }
 
     @Override
