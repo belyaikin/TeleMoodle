@@ -2,6 +2,7 @@ package belyaikin.telemoodle.bot;
 
 import belyaikin.telemoodle.TeleMoodleApplication;
 import belyaikin.telemoodle.model.User;
+import belyaikin.telemoodle.model.moodle.MoodleUser;
 import belyaikin.telemoodle.service.MoodleService;
 import belyaikin.telemoodle.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,9 +51,15 @@ public class Bot extends TelegramLongPollingBot {
             return;
         }
 
+        String token = userService.getByTelegramId(userId).getMoodleToken();
+        MoodleUser user = moodleService.getMoodleUser(token);
 
         sendMessage(chatId,
-                "You're already registered! Your userid is: " + moodleService.getUserId(userService.getByTelegramId(userId).getMoodleToken())
+                "Hello, " + user.getFirstName() + "!"
+        );
+        sendMessage(chatId,
+                "Your courses: " +
+                        moodleService.getMoodleCourses(token, String.valueOf(user.getUserId()))
         );
     }
 

@@ -55,8 +55,8 @@ public class MoodleClient {
                 .url(url)
                 .build();
 
-        try (var da = client.newCall(request).execute()) {
-            return da.body() != null ? da.body().string() : null;
+        try (var response = client.newCall(request).execute()) {
+            return response.body() != null ? response.body().string() : null;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
