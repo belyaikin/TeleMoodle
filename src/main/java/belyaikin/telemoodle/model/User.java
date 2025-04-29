@@ -8,7 +8,7 @@ import lombok.Data;
 @Data
 @Entity
 @Table(name="users")
-public class User {
+public final class User {
     @Id
     private long telegramId;
     private String moodleToken;
