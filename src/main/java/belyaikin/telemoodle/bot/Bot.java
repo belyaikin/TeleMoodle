@@ -94,7 +94,7 @@ public class Bot extends TelegramLongPollingBot {
         try {
             execute(msg);
         } catch (TelegramApiException e) {
-            TeleMoodleApplication.LOGGER.error("Something went wrong when sen");
+            TeleMoodleApplication.LOGGER.error("Something went wrong when showing available options: {}", e.getMessage());
         }
     }
 
