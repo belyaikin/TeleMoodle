@@ -81,7 +81,7 @@ public class Bot extends TelegramLongPollingBot {
             InlineKeyboardButton courseButton = new InlineKeyboardButton();
             courseButton.setText(course.getName());
             // temp
-            courseButton.setCallbackData("all_courses");
+            courseButton.setCallbackData(CallbackType.SHOW_ALL_COURSES.callbackData);
 
             courseButtonsRow.add(courseButton);
             courseButtonsRows.add(courseButtonsRow);
@@ -105,7 +105,7 @@ public class Bot extends TelegramLongPollingBot {
 
         InlineKeyboardButton btn1 = new InlineKeyboardButton();
         btn1.setText("All Courses");
-        btn1.setCallbackData("all_courses");
+        btn1.setCallbackData(CallbackType.SHOW_ALL_COURSES.callbackData);
 
         List<InlineKeyboardButton> row = new ArrayList<>();
         row.add(btn1);
