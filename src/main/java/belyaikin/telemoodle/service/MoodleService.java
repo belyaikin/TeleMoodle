@@ -1,7 +1,9 @@
 package belyaikin.telemoodle.service;
 
+import belyaikin.telemoodle.TeleMoodleApplication;
 import belyaikin.telemoodle.client.MoodleClient;
 import belyaikin.telemoodle.model.moodle.MoodleCourse;
+import belyaikin.telemoodle.model.moodle.MoodleGrade;
 import belyaikin.telemoodle.model.moodle.MoodleUser;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -27,40 +29,8 @@ public class MoodleService {
         return user;
     }
 
-    public MoodleCourse getMoodleCourseById(String token, int courseId) {
-        String response = client.getCourseContent(token,courseId);
-        if(!response.trim().startsWith("[")){
-            throw new RuntimeException("Unexpected response: " + response);
-        }
-
-        JSONArray json = new JSONArray(client.getCourseContent(token, courseId));
-        MoodleCourse course = new MoodleCourse();
-        course.setId(courseId);
-
-        List<String> moduleNames = new ArrayList<>();
-
-        for(int i = 0; i < json.length(); i++){
-            JSONObject section = json.getJSONObject(i);
-
-            if(!section.has("modules")) continue;
-
-            JSONArray modules = section.getJSONArray("modules");
-
-            for(int j = 0; j < modules.length(); j++){
-                JSONObject module = modules.getJSONObject(j);
-                moduleNames.add(module.getString("name"));
-            }
-
-        }
-
-        course.setModuleNames(moduleNames);
-
-        return course;
-
-    }
-
-    public List<MoodleCourse> getMoodleCourses(String token, String userid) {
-        JSONArray array = new JSONArray(client.getUsersCourses(token, userid));
+    public List<MoodleCourse> getCourses(String token, String userId) {
+        JSONArray array = new JSONArray(client.getUsersCourses(token, userId));
 
         List<MoodleCourse> courses = new ArrayList<>();
 
@@ -75,5 +45,48 @@ public class MoodleService {
         }
 
         return courses;
+    }
+
+    public MoodleCourse getCourseByID(String token, String userId, String courseId) {
+        JSONObject courseJson = new JSONObject(client.getCourseByID(token, courseId))
+                .getJSONArray("courses")
+                .getJSONObject(0);
+
+        MoodleCourse course = new MoodleCourse();
+        course.setId(courseJson.getInt("id"));
+        course.setName(courseJson.getString("shortname"));
+        course.setGrades(getCourseGrades(token, userId, String.valueOf(course.getId())));
+
+        return course;
+    }
+
+    private List<MoodleGrade> getCourseGrades(String token, String userId, String courseId) {
+        JSONArray gradeItems = new JSONObject(client.getCourseGrades(token, userId, courseId))
+                .getJSONArray("usergrades")
+                .getJSONObject(0)
+                .getJSONArray("gradeitems");
+
+        TeleMoodleApplication.LOGGER.info(String.valueOf(gradeItems));
+
+        List<MoodleGrade> grades = new ArrayList<>();
+
+        for (int i = 0; i < gradeItems.length(); i++) {
+            MoodleGrade grade = new MoodleGrade();
+            JSONObject gradeJson = gradeItems.getJSONObject(i);
+
+            grade.setId(gradeJson.getInt("id"));
+            grade.setName(gradeJson.getString("itemname"));
+
+            if (!gradeJson.isNull("graderaw")) {
+                grade.setRaw(gradeJson.getLong("graderaw"));
+            }
+            else {
+                grade.setRaw(0);
+            }
+
+            grades.add(grade);
+        }
+
+        return grades;
     }
 }

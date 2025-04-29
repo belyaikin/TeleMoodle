@@ -59,17 +59,15 @@ public class Bot extends TelegramLongPollingBot {
         String token = userService.getByTelegramId(userIdCallback).getMoodleToken();
         MoodleUser user = moodleService.getMoodleUser(token);
 
-        if (callbackData.equals(CallbackType.SHOW_ALL_COURSES.callbackData)) {
+        if (callbackData.equals("all_courses")) {
             listAllCourses(chatIdCallback, token, user.getUserId());
-        } else if (callbackData.equals("Calculus 1 | Abdilazim Assel")) {
-            sendRegularMessage(chatIdCallback, moodleService.getMoodleCourseById(token, 5108).toString());
         } else {
-            sendRegularMessage(chatIdCallback, "Unknown callback query");
+            sendRegularMessage(chatIdCallback, moodleService.getCourseByID(token, String.valueOf(user.getUserId()), callbackData).toString());
         }
     }
 
     private void listAllCourses(long chatId, String token, int userId) {
-        List<MoodleCourse> courses = moodleService.getMoodleCourses(token, String.valueOf(userId));
+        List<MoodleCourse> courses = moodleService.getCourses(token, String.valueOf(userId));
 
         List<List<InlineKeyboardButton>> courseButtonsRows = new ArrayList<>();
 
@@ -83,7 +81,7 @@ public class Bot extends TelegramLongPollingBot {
             InlineKeyboardButton courseButton = new InlineKeyboardButton();
             courseButton.setText(course.getName());
             // temp
-            courseButton.setCallbackData(courseButton.getText());
+            courseButton.setCallbackData(String.valueOf(course.getId()));
 
             courseButtonsRow.add(courseButton);
             courseButtonsRows.add(courseButtonsRow);
@@ -107,7 +105,7 @@ public class Bot extends TelegramLongPollingBot {
 
         InlineKeyboardButton btn1 = new InlineKeyboardButton();
         btn1.setText("All Courses");
-        btn1.setCallbackData(CallbackType.SHOW_ALL_COURSES.callbackData);
+        btn1.setCallbackData("all_courses");
 
         List<InlineKeyboardButton> row = new ArrayList<>();
         row.add(btn1);

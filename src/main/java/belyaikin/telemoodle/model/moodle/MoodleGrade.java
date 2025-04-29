@@ -2,11 +2,9 @@ package belyaikin.telemoodle.model.moodle;
 
 import lombok.Data;
 
-import java.util.List;
-
 @Data
-public final class MoodleCourse {
+public final class MoodleGrade {
     private int id;
     private String name;
-    private List<MoodleGrade> grades;
+    private long raw;
 }
