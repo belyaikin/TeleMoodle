@@ -38,7 +38,7 @@ public class MoodleClient {
         }
     }
 
-    public String getUsersCourses(String token, String userid) {
+    public String getUsersCourses(String token, String userId) {
         HttpUrl url = new HttpUrl.Builder()
                 .scheme("https")
                 .host(moodleUrl)
@@ -47,7 +47,7 @@ public class MoodleClient {
                 .addPathSegment("server.php")
                 .addQueryParameter("wstoken", token)
                 .addQueryParameter("wsfunction", "core_enrol_get_users_courses")
-                .addQueryParameter("userid", userid)
+                .addQueryParameter("userid", userId)
                 .addQueryParameter("moodlewsrestformat", "json")
                 .build();
 
@@ -62,7 +62,7 @@ public class MoodleClient {
         }
     }
 
-    public String getCourseContent(String token, int courseId) {
+    public String getCourseByID(String token, String courseId) {
         HttpUrl url = new HttpUrl.Builder()
                 .scheme("https")
                 .host(moodleUrl)
@@ -70,8 +70,9 @@ public class MoodleClient {
                 .addPathSegment("rest")
                 .addPathSegment("server.php")
                 .addQueryParameter("wstoken", token)
-                .addQueryParameter("wsfunction", "core_course_get_contents")
-                .addQueryParameter("courseid", String.valueOf(courseId))
+                .addQueryParameter("wsfunction", "core_course_get_courses_by_field")
+                .addQueryParameter("field", "id")
+                .addQueryParameter("value", courseId)
                 .addQueryParameter("moodlewsrestformat", "json")
                 .build();
 
@@ -80,17 +81,33 @@ public class MoodleClient {
                 .build();
 
         try (var response = client.newCall(request).execute()) {
+            return response.body() != null ? response.body().string() : null;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
-            if(response.body() == null) {
-                throw new RuntimeException("Course not found");
-            }
+    public String getCourseGrades(String token, String userId, String courseId) {
+        HttpUrl url = new HttpUrl.Builder()
+                .scheme("https")
+                .host(moodleUrl)
+                .addPathSegment("webservice")
+                .addPathSegment("rest")
+                .addPathSegment("server.php")
+                .addQueryParameter("wstoken", token)
+                .addQueryParameter("wsfunction", "gradereport_user_get_grade_items")
+                .addQueryParameter("userid", userId)
+                .addQueryParameter("courseid", courseId)
+                .addQueryParameter("moodlewsrestformat", "json")
+                .build();
 
-            String result = response.body().string();
-            System.out.println("Result of course content" + result);
+        var request = new Request.Builder()
+                .url(url)
+                .build();
 
-            return result;
-
-        } catch (Exception e){
+        try (var response = client.newCall(request).execute()) {
+            return response.body() != null ? response.body().string() : null;
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
