@@ -61,6 +61,8 @@ public class Bot extends TelegramLongPollingBot {
 
         if (callbackData.equals(CallbackType.SHOW_ALL_COURSES.callbackData)) {
             listAllCourses(chatIdCallback, token, user.getUserId());
+        } else if (callbackData.equals("Calculus 1 | Abdilazim Assel")) {
+            sendRegularMessage(chatIdCallback, moodleService.getMoodleCourseById(token, 5108).toString());
         } else {
             sendRegularMessage(chatIdCallback, "Unknown callback query");
         }
@@ -81,7 +83,7 @@ public class Bot extends TelegramLongPollingBot {
             InlineKeyboardButton courseButton = new InlineKeyboardButton();
             courseButton.setText(course.getName());
             // temp
-            courseButton.setCallbackData(CallbackType.SHOW_ALL_COURSES.callbackData);
+            courseButton.setCallbackData(courseButton.getText());
 
             courseButtonsRow.add(courseButton);
             courseButtonsRows.add(courseButtonsRow);

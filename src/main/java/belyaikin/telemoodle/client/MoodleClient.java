@@ -61,4 +61,37 @@ public class MoodleClient {
             throw new RuntimeException(e);
         }
     }
+
+    public String getCourseContent(String token, int courseId) {
+        HttpUrl url = new HttpUrl.Builder()
+                .scheme("https")
+                .host(moodleUrl)
+                .addPathSegment("webservice")
+                .addPathSegment("rest")
+                .addPathSegment("server.php")
+                .addQueryParameter("wstoken", token)
+                .addQueryParameter("wsfunction", "core_course_get_contents")
+                .addQueryParameter("courseid", String.valueOf(courseId))
+                .addQueryParameter("moodlewsrestformat", "json")
+                .build();
+
+        var request = new Request.Builder()
+                .url(url)
+                .build();
+
+        try (var response = client.newCall(request).execute()) {
+
+            if(response.body() == null) {
+                throw new RuntimeException("Course not found");
+            }
+
+            String result = response.body().string();
+            System.out.println("Result of course content" + result);
+
+            return result;
+
+        } catch (Exception e){
+            throw new RuntimeException(e);
+        }
+    }
 }
