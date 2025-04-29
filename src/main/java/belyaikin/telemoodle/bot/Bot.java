@@ -2,6 +2,7 @@ package belyaikin.telemoodle.bot;
 
 import belyaikin.telemoodle.TeleMoodleApplication;
 import belyaikin.telemoodle.model.moodle.MoodleCourse;
+import belyaikin.telemoodle.model.moodle.MoodleGrade;
 import belyaikin.telemoodle.model.moodle.MoodleUser;
 import belyaikin.telemoodle.service.MoodleService;
 import belyaikin.telemoodle.service.UserService;
@@ -62,7 +63,55 @@ public class Bot extends TelegramLongPollingBot {
         if (callbackData.equals("all_courses")) {
             listAllCourses(chatIdCallback, token, user.getUserId());
         } else {
-            sendRegularMessage(chatIdCallback, moodleService.getCourseByID(token, String.valueOf(user.getUserId()), callbackData).toString());
+            MoodleCourse course = moodleService.getCourseByID(token, String.valueOf(user.getUserId()), callbackData);
+
+            MoodleUser student = moodleService.getMoodleUser(token);
+
+            StringBuilder res = new StringBuilder();
+            StringBuilder registerGrades = new StringBuilder();
+            StringBuilder termGrades = new StringBuilder();
+            StringBuilder otherGrades = new StringBuilder();
+            String attendance = "";
+            boolean hasGrades = false;
+
+            res.append("Student: \n").append(student.getFirstName() + " ").append(student.getLastName() + "\n\n");
+
+            res.append("Course name:\n").append(course.getName()).append("\n\n");
+
+            for (MoodleGrade grade : course.getGrades()) {
+                String name = grade.getName();
+                long raw = grade.getRaw();
+
+                if (name == null || name.isBlank()) continue;
+
+                if (name.equalsIgnoreCase("Attendance")) {
+                    attendance = "Course attendance: " + raw + "%\n";
+                    continue;
+                }
+
+                hasGrades = true;
+
+                if (name.contains("Register")) {
+                    registerGrades.append(name).append(": ").append(raw).append("\n");
+                } else if (name.matches("(?i).*Midterm.*|.*Endterm.*|.*Final.*|.*Term.*")) {
+                    termGrades.append(name).append(": ").append(raw).append("\n");
+                } else {
+                    otherGrades.append(name).append(": ").append(raw).append("\n");
+                }
+            }
+
+            if (!attendance.isEmpty()) res.append(attendance).append("\n");
+
+            if (hasGrades) {
+                res.append("Course grades:\n");
+                if (!registerGrades.isEmpty()) res.append("\nRegisters:\n").append(registerGrades);
+                if (!termGrades.isEmpty()) res.append("\nTerm Grades:\n").append(termGrades);
+                if (!otherGrades.isEmpty()) res.append("\nOther Grades:\n").append(otherGrades);
+            } else {
+                res.append("No grades available.");
+            }
+
+            sendRegularMessage(chatIdCallback, String.valueOf(res));
         }
     }
 
