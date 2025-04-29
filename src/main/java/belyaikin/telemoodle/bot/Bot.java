@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
@@ -23,52 +24,78 @@ public class Bot extends TelegramLongPollingBot {
     @Autowired private UserService userService;
     @Autowired private MoodleService moodleService;
 
-
     public Bot(@Value("${bot.token}") String botToken) {
         super(botToken);
     }
 
     @Override
+    public String getBotUsername() {
+        return "telemoodle_bot";
+    }
+
+    @Override
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
+            // TODO: implement registration again
+
             String message = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
 
             TeleMoodleApplication.LOGGER.info("Received message: {}", message);
 
-            if (message.equals("/start")) {
-                showAvailableOptions(chatId);
-            }
-
+            showAvailableOptions(chatId);
         } else if (update.hasCallbackQuery()) {
-            String callbackData = update.getCallbackQuery().getData();
-            long chatIdCallback = update.getCallbackQuery().getMessage().getChatId();
-
-            TeleMoodleApplication.LOGGER.info("Received callback: {}", callbackData);
-
-            if (callbackData.equals(CallbackType.SHOW_ALL_COURSES.string)) {
-                long userIdCallback = update.getCallbackQuery().getFrom().getId();
-                String token = userService.getByTelegramId(userIdCallback).getMoodleToken();
-                MoodleUser user = moodleService.getMoodleUser(token);
-
-                List<MoodleCourse> courses = moodleService.getMoodleCourses(token, String.valueOf(user.getUserId()));
-
-                StringBuilder coursesList = new StringBuilder("Here are all your courses:\n\n");
-                for (int i = 0; i < courses.size(); i++) {
-                    MoodleCourse course = courses.get(i);
-                    coursesList.append(i + 1).append(". ").append(course.getName()).append("\n");
-                }
-
-                sendRegularMessage(chatIdCallback, coursesList.toString());
-            }
+            processCallbackQuery(update.getCallbackQuery());
         } else {
             sendRegularMessage(update.getMessage().getChatId(), "Please try again.");
         }
     }
 
-    @Override
-    public String getBotUsername() {
-        return "telemoodle_bot";
+    private void processCallbackQuery(CallbackQuery callbackQuery) {
+        String callbackData = callbackQuery.getData();
+        long chatIdCallback = callbackQuery.getMessage().getChatId();
+        long userIdCallback = callbackQuery.getFrom().getId();
+
+        String token = userService.getByTelegramId(userIdCallback).getMoodleToken();
+        MoodleUser user = moodleService.getMoodleUser(token);
+
+        if (callbackData.equals(CallbackType.SHOW_ALL_COURSES.callbackData)) {
+            listAllCourses(chatIdCallback, token, user.getUserId());
+        } else {
+            sendRegularMessage(chatIdCallback, "Unknown callback query");
+        }
+    }
+
+    private void listAllCourses(long chatId, String token, int userId) {
+        List<MoodleCourse> courses = moodleService.getMoodleCourses(token, String.valueOf(userId));
+
+        List<List<InlineKeyboardButton>> courseButtonsRows = new ArrayList<>();
+
+        SendMessage msg = new SendMessage();
+        msg.setChatId(String.valueOf(chatId));
+        msg.setText("Here are all your courses:");
+
+        for (MoodleCourse course : courses) {
+            List<InlineKeyboardButton> courseButtonsRow = new ArrayList<>();
+
+            InlineKeyboardButton courseButton = new InlineKeyboardButton();
+            courseButton.setText(course.getName());
+            // temp
+            courseButton.setCallbackData("all_courses");
+
+            courseButtonsRow.add(courseButton);
+            courseButtonsRows.add(courseButtonsRow);
+        }
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        markup.setKeyboard(courseButtonsRows);
+        msg.setReplyMarkup(markup);
+
+        try {
+            execute(msg);
+        } catch (TelegramApiException e) {
+            TeleMoodleApplication.LOGGER.error("Something went wrong when showing listing all courses: {}", e.getMessage());
+        }
     }
 
     private void showAvailableOptions(long chatId) {

@@ -3,9 +3,9 @@ package belyaikin.telemoodle.bot;
 public enum CallbackType {
     SHOW_ALL_COURSES("all_courses");
 
-    public final String string;
+    public final String callbackData;
 
-    CallbackType(String stringRepresentation) {
-        this.string = stringRepresentation;
+    CallbackType(String callbackData) {
+        this.callbackData = callbackData;
     }
 }
