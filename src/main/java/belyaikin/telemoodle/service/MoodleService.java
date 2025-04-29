@@ -10,6 +10,7 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,7 +48,7 @@ public class MoodleService {
         return courses;
     }
 
-    public MoodleCourse getCourseByID(String token, String userId, String courseId) {
+    public String getCourseByID(String token, String userId, String courseId) {
         JSONObject courseJson = new JSONObject(client.getCourseByID(token, courseId))
                 .getJSONArray("courses")
                 .getJSONObject(0);
@@ -57,8 +58,55 @@ public class MoodleService {
         course.setName(courseJson.getString("shortname"));
         course.setGrades(getCourseGrades(token, userId, String.valueOf(course.getId())));
 
-        return course;
+        MoodleUser student = getMoodleUser(token);
+
+        StringBuilder res = new StringBuilder();
+        StringBuilder registerGrades = new StringBuilder();
+        StringBuilder termGrades = new StringBuilder();
+        StringBuilder otherGrades = new StringBuilder();
+        String attendance = "";
+        boolean hasGrades = false;
+
+        res.append("Student: \n").append(student.getFirstName() + " ").append(student.getLastName() + "\n\n");
+
+        res.append("Course name:\n").append(course.getName()).append("\n\n");
+
+        for (MoodleGrade grade : course.getGrades()) {
+            String name = grade.getName();
+            long raw = grade.getRaw();
+
+            if (name == null || name.isBlank()) continue;
+
+            if (name.equalsIgnoreCase("Attendance")) {
+                attendance = "Course attendance: " + raw + "%\n";
+                continue;
+            }
+
+            hasGrades = true;
+
+            if (name.contains("Register")) {
+                registerGrades.append(name).append(": ").append(raw).append("\n");
+            } else if (name.matches("(?i).*Midterm.*|.*Endterm.*|.*Final.*|.*Term.*")) {
+                termGrades.append(name).append(": ").append(raw).append("\n");
+            } else {
+                otherGrades.append(name).append(": ").append(raw).append("\n");
+            }
+        }
+
+        if (!attendance.isEmpty()) res.append(attendance).append("\n");
+
+        if (hasGrades) {
+            res.append("Course grades:\n");
+            if (!registerGrades.isEmpty()) res.append("\nRegisters:\n").append(registerGrades);
+            if (!termGrades.isEmpty()) res.append("\nTerm Grades:\n").append(termGrades);
+            if (!otherGrades.isEmpty()) res.append("\nOther Grades:\n").append(otherGrades);
+        } else {
+            res.append("No grades available.");
+        }
+
+        return res.toString();
     }
+
 
     private List<MoodleGrade> getCourseGrades(String token, String userId, String courseId) {
         JSONArray gradeItems = new JSONObject(client.getCourseGrades(token, userId, courseId))
