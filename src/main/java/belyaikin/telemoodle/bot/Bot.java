@@ -1,14 +1,12 @@
 package belyaikin.telemoodle.bot;
 
 import belyaikin.telemoodle.TeleMoodleApplication;
-import belyaikin.telemoodle.model.User;
 import belyaikin.telemoodle.model.moodle.MoodleCourse;
 import belyaikin.telemoodle.model.moodle.MoodleUser;
 import belyaikin.telemoodle.service.MoodleService;
 import belyaikin.telemoodle.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -36,42 +34,19 @@ public class Bot extends TelegramLongPollingBot {
             String message = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
 
-            System.out.println("Message received: " + message);
+            TeleMoodleApplication.LOGGER.info("Received message: {}", message);
 
             if (message.equals("/start")) {
-                SendMessage msg = new SendMessage();
-                msg.setChatId(String.valueOf(chatId));
-                msg.setText("Choose an option:");
-
-                InlineKeyboardButton btn1 = new InlineKeyboardButton();
-                btn1.setText("All Courses");
-                btn1.setCallbackData("all_courses");
-
-                List<InlineKeyboardButton> row = new ArrayList<>();
-                row.add(btn1);
-
-                List<List<InlineKeyboardButton>> rows = new ArrayList<>();
-                rows.add(row);
-
-                InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
-                markup.setKeyboard(rows);
-
-                msg.setReplyMarkup(markup);
-
-                try {
-                    execute(msg);
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                }
+                showAvailableOptions(chatId);
             }
 
         } else if (update.hasCallbackQuery()) {
             String callbackData = update.getCallbackQuery().getData();
             long chatIdCallback = update.getCallbackQuery().getMessage().getChatId();
 
-            System.out.println("Callback received: " + callbackData);
+            TeleMoodleApplication.LOGGER.info("Received callback: {}", callbackData);
 
-            if ("all_courses".equals(callbackData)) {
+            if (callbackData.equals(CallbackType.SHOW_ALL_COURSES.string)) {
                 long userIdCallback = update.getCallbackQuery().getFrom().getId();
                 String token = userService.getByTelegramId(userIdCallback).getMoodleToken();
                 MoodleUser user = moodleService.getMoodleUser(token);
@@ -84,19 +59,46 @@ public class Bot extends TelegramLongPollingBot {
                     coursesList.append(i + 1).append(". ").append(course.getName()).append("\n");
                 }
 
-                sendMessage(chatIdCallback, coursesList.toString());
+                sendRegularMessage(chatIdCallback, coursesList.toString());
             }
         } else {
-            sendMessage(update.getMessage().getChatId(), "Please try again.");
+            sendRegularMessage(update.getMessage().getChatId(), "Please try again.");
         }
     }
 
     @Override
     public String getBotUsername() {
-        return "mini_moodle_bot";
+        return "telemoodle_bot";
     }
 
-    public void sendMessage(long chatId, String text) {
+    private void showAvailableOptions(long chatId) {
+        SendMessage msg = new SendMessage();
+        msg.setChatId(String.valueOf(chatId));
+        msg.setText("Choose an option:");
+
+        InlineKeyboardButton btn1 = new InlineKeyboardButton();
+        btn1.setText("All Courses");
+        btn1.setCallbackData("all_courses");
+
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        row.add(btn1);
+
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        rows.add(row);
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        markup.setKeyboard(rows);
+
+        msg.setReplyMarkup(markup);
+
+        try {
+            execute(msg);
+        } catch (TelegramApiException e) {
+            TeleMoodleApplication.LOGGER.error("Something went wrong when sen");
+        }
+    }
+
+    private void sendRegularMessage(long chatId, String text) {
         SendMessage sendMessage = new SendMessage(String.valueOf(chatId), text);
         try {
             execute(sendMessage);
