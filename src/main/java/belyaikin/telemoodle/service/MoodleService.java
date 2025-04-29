@@ -27,6 +27,38 @@ public class MoodleService {
         return user;
     }
 
+    public MoodleCourse getMoodleCourseById(String token, int courseId) {
+        String response = client.getCourseContent(token,courseId);
+        if(!response.trim().startsWith("[")){
+            throw new RuntimeException("Unexpected response: " + response);
+        }
+
+        JSONArray json = new JSONArray(client.getCourseContent(token, courseId));
+        MoodleCourse course = new MoodleCourse();
+        course.setId(courseId);
+
+        List<String> moduleNames = new ArrayList<>();
+
+        for(int i = 0; i < json.length(); i++){
+            JSONObject section = json.getJSONObject(i);
+
+            if(!section.has("modules")) continue;
+
+            JSONArray modules = section.getJSONArray("modules");
+
+            for(int j = 0; j < modules.length(); j++){
+                JSONObject module = modules.getJSONObject(j);
+                moduleNames.add(module.getString("name"));
+            }
+
+        }
+
+        course.setModuleNames(moduleNames);
+
+        return course;
+
+    }
+
     public List<MoodleCourse> getMoodleCourses(String token, String userid) {
         JSONArray array = new JSONArray(client.getUsersCourses(token, userid));
 
