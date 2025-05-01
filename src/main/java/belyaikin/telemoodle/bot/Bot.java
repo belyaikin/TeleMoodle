@@ -1,6 +1,7 @@
 package belyaikin.telemoodle.bot;
 
 import belyaikin.telemoodle.TeleMoodleApplication;
+import belyaikin.telemoodle.model.User;
 import belyaikin.telemoodle.model.moodle.MoodleCourse;
 import belyaikin.telemoodle.model.moodle.MoodleGrade;
 import belyaikin.telemoodle.model.moodle.MoodleUser;
@@ -41,14 +42,43 @@ public class Bot extends TelegramLongPollingBot {
 
             String message = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
+            long userId = update.getMessage().getFrom().getId();
 
             TeleMoodleApplication.LOGGER.info("Received message: {}", message);
 
-            showAvailableOptions(chatId);
+            if(!userService.isUserRegistered(userId)){
+                if(message.length() != 32) {
+                    sendRegularMessage(chatId, "Welcome to Puddle \nPlease send me a valid Moodle security key");
+                    return;
+                }
+
+                User user = new User();
+                user.setTelegramId(userId);
+                user.setMoodleToken(message);
+
+                userService.create(user);
+
+                sendRegularMessage(chatId, "You were registered successful");
+
+                return;
+
+            }
+
+
+            if (message.equals("/showcourses")) {
+                showAvailableOptions(chatId);
+            }
+
+            if(message.equals("/showdeadlines")){
+                sendRegularMessage(chatId, "Not available yet :(");
+            }
+
+            sendRegularMessage(chatId, "Please try send an available command");
+
         } else if (update.hasCallbackQuery()) {
             processCallbackQuery(update.getCallbackQuery());
         } else {
-            sendRegularMessage(update.getMessage().getChatId(), "Please try again.");
+            sendRegularMessage(update.getMessage().getChatId(), "Please try send an available command.");
         }
     }
 
