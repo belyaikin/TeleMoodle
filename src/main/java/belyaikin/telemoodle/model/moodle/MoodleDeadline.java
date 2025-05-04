@@ -6,11 +6,6 @@ import lombok.Data;
 public final class MoodleDeadline {
     private String assignmentName;
     private long timeEnd;
-    private String isLastDay;
+    private boolean isLastDay;
     private MoodleCourse course;
-
-    public void setIsLastDay(boolean islastday) {
-        this.isLastDay = islastday ? "Yes" : "No";
-    }
-
 }

@@ -38,48 +38,66 @@ public class Bot extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
-            // TODO: implement registration again
-
             String message = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
             long userId = update.getMessage().getFrom().getId();
 
-            TeleMoodleApplication.LOGGER.info("Received message: {}", message);
-
-            if(!userService.isUserRegistered(userId)){
-                if(message.length() != 32) {
-                    sendRegularMessage(chatId, "Welcome to Puddle \nPlease send me a valid Moodle security key");
-                    return;
-                }
-
-                User user = new User();
-                user.setTelegramId(userId);
-                user.setMoodleToken(message);
-
-                userService.create(user);
-
-                sendRegularMessage(chatId, "You were registered successful");
-
-                return;
-
+            switch (message) {
+                case "/start":
+                    if (!userService.isUserRegistered(userId)) {
+                        startRegistrationProcess(message, chatId, userId);
+                    } else {
+                        sendRegularMessage(chatId,
+                                "Click the menu button near the text input field to show available commands 😊"
+                        );
+                    }
+                    break;
+                case "/courses":
+                    showAvailableCourseOptions(chatId);
+                    break;
+                case "/deadlines":
+                    sendRegularMessage(chatId, "Not available yet :(");
+                    break;
+                default:
+                    sendRegularMessage(chatId,
+                            "Click the menu button near the text input field to show available commands 😊"
+                    );
             }
-
-
-            if (message.equals("/showcourses")) {
-                showAvailableOptions(chatId);
-            }
-
-            if(message.equals("/showdeadlines")){
-                sendRegularMessage(chatId, "Not available yet :(");
-            }
-
-            sendRegularMessage(chatId, "Please try send an available command");
 
         } else if (update.hasCallbackQuery()) {
             processCallbackQuery(update.getCallbackQuery());
         } else {
             sendRegularMessage(update.getMessage().getChatId(), "Please try send an available command.");
         }
+    }
+
+    private void startRegistrationProcess(String message, long chatId, long userId) {
+        sendRegularMessage(chatId,
+                """
+                        Hello! 👋
+                        It looks like you are texting me for the first time.
+                        
+                        Please send me your Moodle token, so I can get information from Moodle.
+                        
+                        ReMoodle team has written a pretty clear instruction of how to obtain it.
+                        https://ext.remoodle.app/find-token"""
+        );
+
+        if(message.length() != 32) {
+            sendRegularMessage(chatId, "❌ I think this token is invalid! Please send me a valid Moodle key.");
+            return;
+        }
+
+        User user = new User();
+        user.setTelegramId(userId);
+        user.setMoodleToken(message);
+
+        userService.create(user);
+
+        sendRegularMessage(chatId, """
+                        ✅ You were registered successfully! Welcome to TeleMoodle, feel yourself like at home 😊
+                        Click the menu button near the text input field to show available commands."""
+        );
     }
 
     private void processCallbackQuery(CallbackQuery callbackQuery) {
@@ -159,7 +177,6 @@ public class Bot extends TelegramLongPollingBot {
 
             InlineKeyboardButton courseButton = new InlineKeyboardButton();
             courseButton.setText(course.getName());
-            // temp
             courseButton.setCallbackData(String.valueOf(course.getId()));
 
             courseButtonsRow.add(courseButton);
@@ -177,19 +194,24 @@ public class Bot extends TelegramLongPollingBot {
         }
     }
 
-    private void showAvailableOptions(long chatId) {
+    private void showAvailableCourseOptions(long chatId) {
         SendMessage msg = new SendMessage();
         msg.setChatId(String.valueOf(chatId));
         msg.setText("Choose an option:");
 
-        InlineKeyboardButton btn1 = new InlineKeyboardButton();
-        btn1.setText("All Courses");
-        btn1.setCallbackData("all_courses");
+        InlineKeyboardButton allCourses = new InlineKeyboardButton();
+        allCourses.setText("All Courses");
+        allCourses.setCallbackData("all_courses");
+
+        InlineKeyboardButton currentCourses = new InlineKeyboardButton();
+        currentCourses.setText("Current Courses");
+        currentCourses.setCallbackData("all_courses");
 
         List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(btn1);
-
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+        row.add(allCourses);
+        row.add(currentCourses);
         rows.add(row);
 
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
