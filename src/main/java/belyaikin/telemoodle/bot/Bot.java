@@ -43,7 +43,13 @@ public class Bot extends TelegramLongPollingBot {
             long userId = update.getMessage().getFrom().getId();
 
             switch (message) {
-                case "/start":
+                case "/courses":
+                    showAvailableCourseOptions(chatId);
+                    break;
+                case "/deadlines":
+                    sendRegularMessage(chatId, "Not available yet :(");
+                    break;
+                default:
                     if (!userService.isUserRegistered(userId)) {
                         startRegistrationProcess(message, chatId, userId);
                     } else {
@@ -52,16 +58,6 @@ public class Bot extends TelegramLongPollingBot {
                         );
                     }
                     break;
-                case "/courses":
-                    showAvailableCourseOptions(chatId);
-                    break;
-                case "/deadlines":
-                    sendRegularMessage(chatId, "Not available yet :(");
-                    break;
-                default:
-                    sendRegularMessage(chatId,
-                            "Click the menu button near the text input field to show available commands 😊"
-                    );
             }
 
         } else if (update.hasCallbackQuery()) {
