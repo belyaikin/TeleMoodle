@@ -3,6 +3,7 @@ package belyaikin.telemoodle.bot;
 import belyaikin.telemoodle.TeleMoodleApplication;
 import belyaikin.telemoodle.model.User;
 import belyaikin.telemoodle.model.moodle.MoodleCourse;
+import belyaikin.telemoodle.model.moodle.MoodleDeadline;
 import belyaikin.telemoodle.model.moodle.MoodleGrade;
 import belyaikin.telemoodle.model.moodle.MoodleUser;
 import belyaikin.telemoodle.service.MoodleService;
@@ -18,8 +19,8 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 @Component
 public class Bot extends TelegramLongPollingBot {
@@ -47,7 +48,7 @@ public class Bot extends TelegramLongPollingBot {
                     showAvailableCourseOptions(chatId);
                     break;
                 case "/deadlines":
-                    sendRegularMessage(chatId, "Not available yet :(");
+                    showDeadlines(chatId, userId);
                     break;
                 default:
                     if (!userService.isUserRegistered(userId)) {
@@ -230,4 +231,33 @@ public class Bot extends TelegramLongPollingBot {
             TeleMoodleApplication.LOGGER.error("Error sending message: {}", e.getMessage());
         }
     }
+
+    private void showDeadlines(long chatId, long userId) {
+        String token = userService.getByTelegramId(userId).getMoodleToken();
+        List<MoodleDeadline> deadlines = moodleService.getAllDeadlines(token);
+
+        SimpleDateFormat formatter = new SimpleDateFormat("dd MMM yyyy, HH:mm");
+        formatter.setTimeZone(TimeZone.getTimeZone("Asia/Yekaterinburg"));
+
+        StringBuilder messageText = new StringBuilder();
+        messageText.append("Here are your upcoming deadlines:\n\n");
+
+        SimpleDateFormat sdf = new SimpleDateFormat("E MMM dd HH:mm:ss", Locale.ENGLISH);
+
+        for (MoodleDeadline deadline : deadlines) {
+            if (deadline.getAssignmentName().contains("Attendance")) continue;
+            long timestampMillis = deadline.getTimeEnd() * 1000L;
+            Date date = new Date(timestampMillis);
+            String formattedDate = sdf.format(date);
+            messageText
+                    .append("-----------------").append("\n")
+                    .append("Course: ").append(deadline.getCourse().getName()).append("  ||  ")
+                    .append(deadline.getAssignmentName()).append("  ||  ")
+                    .append("Due Date: ").append(formattedDate).append("  ||  ")
+                    .append("Is Last Day: ").append(deadline.getIsLastDay()).append("\n");
+        }
+
+        sendRegularMessage(chatId, messageText.toString());
+    }
+
 }

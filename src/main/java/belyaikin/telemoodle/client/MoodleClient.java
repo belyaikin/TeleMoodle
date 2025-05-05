@@ -87,6 +87,30 @@ public class MoodleClient {
         }
     }
 
+    public String getAllDeadlines(String token) {
+        HttpUrl url = new HttpUrl.Builder()
+                .scheme("https")
+                .host(moodleUrl)
+                .addPathSegment("webservice")
+                .addPathSegment("rest")
+                .addPathSegment("server.php")
+                .addQueryParameter("wstoken", token)
+                .addQueryParameter("wsfunction", "core_calendar_get_calendar_upcoming_view")
+                .addQueryParameter("moodlewsrestformat", "json")
+                .build();
+
+        var request = new Request.Builder()
+                .url(url)
+                .build();
+
+        try (var response = client.newCall(request).execute()){
+            return response.body() != null ? response.body().string() : null;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
     public String getCourseGrades(String token, String userId, String courseId) {
         HttpUrl url = new HttpUrl.Builder()
                 .scheme("https")

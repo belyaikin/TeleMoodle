@@ -3,6 +3,7 @@ package belyaikin.telemoodle.service;
 import belyaikin.telemoodle.TeleMoodleApplication;
 import belyaikin.telemoodle.client.MoodleClient;
 import belyaikin.telemoodle.model.moodle.MoodleCourse;
+import belyaikin.telemoodle.model.moodle.MoodleDeadline;
 import belyaikin.telemoodle.model.moodle.MoodleGrade;
 import belyaikin.telemoodle.model.moodle.MoodleUser;
 import org.json.JSONArray;
@@ -47,6 +48,8 @@ public class MoodleService {
         return courses;
     }
 
+
+
     public MoodleCourse getCourseByID(String token, String userId, String courseId) {
         JSONObject courseJson = new JSONObject(client.getCourseByID(token, courseId))
                 .getJSONArray("courses")
@@ -90,4 +93,39 @@ public class MoodleService {
 
         return grades;
     }
+
+        public List<MoodleDeadline> getAllDeadlines(String token) {
+
+            JSONObject deadlinesJson = new JSONObject(client.getAllDeadlines(token));
+
+            List<MoodleDeadline> deadlines = new ArrayList<>();
+
+            JSONArray events = deadlinesJson.getJSONArray("events");
+            for (int i = 0; i < events.length(); i++) {
+                JSONObject event = events.getJSONObject(i);
+
+                MoodleDeadline deadline = new MoodleDeadline();
+
+                deadline.setAssignmentName(event.getString("name"));
+                deadline.setIsLastDay(event.getBoolean("islastday"));
+
+                if (event.has("maxdaytimestamp")){
+                    deadline.setTimeEnd(event.getLong("timesort"));
+                } else {
+                    deadline.setTimeEnd(0);
+                }
+
+
+                JSONObject courseJson = event.getJSONObject("course");
+                MoodleCourse course = new MoodleCourse();
+                course.setId(courseJson.getInt("id"));
+                course.setName(courseJson.getString("shortname"));
+                deadline.setCourse(course);
+
+                deadlines.add(deadline);
+
+            }
+
+            return deadlines;
+        }
 }
