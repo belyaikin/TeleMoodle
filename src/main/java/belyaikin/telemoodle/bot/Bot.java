@@ -254,7 +254,7 @@ public class Bot extends TelegramLongPollingBot {
                     .append("Course: ").append(deadline.getCourse().getName()).append("  ||  ")
                     .append(deadline.getAssignmentName()).append("  ||  ")
                     .append("Due Date: ").append(formattedDate).append("  ||  ")
-                    .append("Is Last Day: ").append(deadline.getIsLastDay()).append("\n");
+                    .append("Is Last Day: ").append(deadline.isLastDay() ? "Yes" : "No").append("\n");
         }
 
         sendRegularMessage(chatId, messageText.toString());
