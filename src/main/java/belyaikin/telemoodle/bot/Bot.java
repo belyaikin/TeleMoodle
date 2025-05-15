@@ -3,6 +3,9 @@ package belyaikin.telemoodle.bot;
 import belyaikin.telemoodle.TeleMoodleApplication;
 import belyaikin.telemoodle.model.User;
 import belyaikin.telemoodle.model.moodle.*;
+import belyaikin.telemoodle.model.moodle.course.Deadline;
+import belyaikin.telemoodle.model.moodle.course.Grade;
+import belyaikin.telemoodle.model.moodle.course.Course;
 import belyaikin.telemoodle.service.MoodleService;
 import belyaikin.telemoodle.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -111,7 +114,7 @@ public class Bot extends TelegramLongPollingBot {
             listAllCourses(chatIdCallback, token, user.getUserId());
         } else {
             // If callback data equals course id. Refactor this!
-            CourseInformation course = moodleService.getCourseByID(token, callbackData);
+            Course course = moodleService.getCourseByID(token, callbackData);
 
             MoodleUser student = moodleService.getMoodleUser(token);
 
@@ -126,7 +129,7 @@ public class Bot extends TelegramLongPollingBot {
 
             res.append("Course name:\n").append(course.name()).append("\n\n");
 
-            for (CourseGrade grade : moodleService.getCourseGrades(token, String.valueOf(user.getUserId()), String.valueOf(course.id()))) {
+            for (Grade grade : moodleService.getCourseGrades(token, String.valueOf(user.getUserId()), String.valueOf(course.id()))) {
                 String name = grade.name();
                 long raw = grade.raw();
 
@@ -164,7 +167,7 @@ public class Bot extends TelegramLongPollingBot {
     }
 
     private void listAllCourses(long chatId, String token, int userId) {
-        List<CourseInformation> courses = moodleService.getCourses(token, String.valueOf(userId));
+        List<Course> courses = moodleService.getCourses(token, String.valueOf(userId));
 
         List<List<InlineKeyboardButton>> courseButtonsRows = new ArrayList<>();
 
@@ -172,7 +175,7 @@ public class Bot extends TelegramLongPollingBot {
         msg.setChatId(String.valueOf(chatId));
         msg.setText("Here are all your courses:");
 
-        for (CourseInformation course : courses) {
+        for (Course course : courses) {
             List<InlineKeyboardButton> courseButtonsRow = new ArrayList<>();
 
             InlineKeyboardButton courseButton = new InlineKeyboardButton();
@@ -237,7 +240,7 @@ public class Bot extends TelegramLongPollingBot {
 
     private void showDeadlines(long chatId, long userId) {
         String token = userService.getByTelegramId(userId).getMoodleToken();
-        List<MoodleDeadline> deadlines = moodleService.getAllDeadlines(token);
+        List<Deadline> deadlines = moodleService.getAllDeadlines(token);
 
         SimpleDateFormat formatter = new SimpleDateFormat("dd MMM yyyy, HH:mm");
         formatter.setTimeZone(TimeZone.getTimeZone("Asia/Yekaterinburg"));
@@ -247,17 +250,17 @@ public class Bot extends TelegramLongPollingBot {
 
         SimpleDateFormat sdf = new SimpleDateFormat("E MMM dd HH:mm:ss", Locale.ENGLISH);
 
-        for (MoodleDeadline deadline : deadlines) {
-            if (deadline.getAssignmentName().contains("Attendance")) continue;
-            long timestampMillis = deadline.getTimeEnd() * 1000L;
+        for (Deadline deadline : deadlines) {
+            if (deadline.name().contains("Attendance")) continue;
+            long timestampMillis = deadline.timeEnd() * 1000L;
             Date date = new Date(timestampMillis);
             String formattedDate = sdf.format(date);
             messageText
                     .append("-----------------").append("\n")
-                    .append("Course: ").append(deadline.getCourse().getName()).append("  ||  ")
-                    .append(deadline.getAssignmentName()).append("  ||  ")
+                    .append("Course: ").append(deadline.course().name()).append("  ||  ")
+                    .append(deadline.name()).append("  ||  ")
                     .append("Due Date: ").append(formattedDate).append("  ||  ")
-                    .append("Is Last Day: ").append(deadline.isLastDay() ? "Yes" : "No").append("\n");
+                    .append("Is Last Day: ").append(deadline.lastDay() ? "Yes" : "No").append("\n");
         }
 
         sendRegularMessage(chatId, messageText.toString());

@@ -3,6 +3,9 @@ package belyaikin.telemoodle.service;
 import belyaikin.telemoodle.TeleMoodleApplication;
 import belyaikin.telemoodle.client.MoodleClient;
 import belyaikin.telemoodle.model.moodle.*;
+import belyaikin.telemoodle.model.moodle.course.Deadline;
+import belyaikin.telemoodle.model.moodle.course.Grade;
+import belyaikin.telemoodle.model.moodle.course.Course;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,16 +38,16 @@ public class MoodleService {
         return user;
     }
 
-    public List<CourseInformation> getCourses(String token, String userId) {
+    public List<Course> getCourses(String token, String userId) {
         JSONArray array = new JSONArray(client.getUsersCourses(token, userId));
 
-        List<CourseInformation> courses = new ArrayList<>();
+        List<Course> courses = new ArrayList<>();
 
         try {
             for (int i = 0; i < array.length(); i++) {
                 JSONObject jsonObject = array.getJSONObject(i);
 
-                courses.add(new CourseInformation(
+                courses.add(new Course(
                         jsonObject.getInt("id"),
                         jsonObject.getString("displayname"),
                         jsonObject.getLong("startdate"),
@@ -62,13 +65,13 @@ public class MoodleService {
         return courses;
     }
 
-    public CourseInformation getCourseByID(String token, String courseId) {
+    public Course getCourseByID(String token, String courseId) {
         JSONObject courseJson = new JSONObject(client.getCourseByID(token, courseId))
                 .getJSONArray("courses")
                 .getJSONObject(0);
 
         try {
-            return new CourseInformation(
+            return new Course(
                     courseJson.getInt("id"),
                     courseJson.getString("displayname"),
                     courseJson.getLong("startdate"),
@@ -85,23 +88,25 @@ public class MoodleService {
         return null;
     }
 
-    public List<CourseGrade> getCourseGrades(String token, String userId, String courseId) {
-        JSONArray gradeItems = new JSONObject(client.getCourseGrades(token, userId, courseId))
-                .getJSONArray("usergrades")
-                .getJSONObject(0)
-                .getJSONArray("gradeitems");
+    public List<Grade> getCourseGrades(String token, String userId, String courseId) {
+        JSONObject userGradesObject = new JSONObject(
+                client.getCourseGrades(token, userId, courseId)).getJSONArray("usergrades").getJSONObject(0
+        );
 
-        List<CourseGrade> grades = new ArrayList<>();
+        JSONArray gradeItems = userGradesObject.getJSONArray("gradeitems");
+
+        List<Grade> grades = new ArrayList<>();
 
         try {
             for (int i = 0; i < gradeItems.length(); i++) {
                 JSONObject gradeJson = gradeItems.getJSONObject(i);
 
                 grades.add(
-                        new CourseGrade(
+                        new Grade(
                                 gradeJson.getInt("id"),
                                 gradeJson.getString("itemname"),
-                                gradeJson.isNull("graderaw") ? 0 : gradeJson.getLong("graderaw")
+                                gradeJson.isNull("graderaw") ? 0 : gradeJson.getLong("graderaw"),
+                                getCourseByID(token, String.valueOf(userGradesObject.getInt("courseid")))
                         )
                 );
             }
@@ -116,30 +121,34 @@ public class MoodleService {
         return grades;
     }
 
-    public List<MoodleDeadline> getAllDeadlines(String token) {
+    public List<Deadline> getAllDeadlines(String token) {
         JSONObject deadlinesJson = new JSONObject(client.getAllDeadlines(token));
-        List<MoodleDeadline> deadlines = new ArrayList<>();
+        List<Deadline> deadlines = new ArrayList<>();
 
         try {
             JSONArray events = deadlinesJson.getJSONArray("events");
+
             for (int i = 0; i < events.length(); i++) {
                 JSONObject event = events.getJSONObject(i);
-                MoodleDeadline deadline = new MoodleDeadline();
-                deadline.setAssignmentName(event.getString("name"));
-                deadline.setLastDay(event.getBoolean("islastday"));
 
-                if (event.has("maxdaytimestamp")) {
-                    deadline.setTimeEnd(event.getLong("timesort"));
-                } else {
-                    deadline.setTimeEnd(0);
-                }
+                // Why moodle includes a whole course object along with an event object???
+                JSONObject course = event.getJSONObject("course");
 
-                JSONObject courseJson = event.getJSONObject("course");
-                MoodleCourse course = new MoodleCourse();
-                course.setId(courseJson.getInt("id"));
-                course.setName(courseJson.getString("shortname"));
-                deadline.setCourse(course);
-                deadlines.add(deadline);
+                if (!event.has("maxdaytimestamp")) continue;
+
+                deadlines.add(
+                        new Deadline(
+                                event.getString("name"),
+                                event.getLong("timesort"),
+                                event.getBoolean("islastday"),
+                                new Course(
+                                        course.getInt("id"),
+                                        course.getString("fullnamedisplay"),
+                                        course.getLong("startdate"),
+                                        course.getLong("enddate")
+                                )
+                        )
+                );
             }
         } catch (Exception e) {
             TeleMoodleApplication.LOGGER.error("""

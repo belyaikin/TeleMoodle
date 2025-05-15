@@ -1,6 +1,6 @@
-package belyaikin.telemoodle.model.moodle;
+package belyaikin.telemoodle.model.moodle.course;
 
-public record CourseInformation(
+public record Course(
         int id,
         String name,
         long startDate,
