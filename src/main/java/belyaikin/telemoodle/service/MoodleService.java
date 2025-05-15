@@ -2,10 +2,10 @@ package belyaikin.telemoodle.service;
 
 import belyaikin.telemoodle.TeleMoodleApplication;
 import belyaikin.telemoodle.client.MoodleClient;
-import belyaikin.telemoodle.model.moodle.MoodleCourse;
-import belyaikin.telemoodle.model.moodle.MoodleDeadline;
-import belyaikin.telemoodle.model.moodle.MoodleGrade;
-import belyaikin.telemoodle.model.moodle.MoodleUser;
+import belyaikin.telemoodle.model.moodle.*;
+import belyaikin.telemoodle.model.moodle.course.Deadline;
+import belyaikin.telemoodle.model.moodle.course.Grade;
+import belyaikin.telemoodle.model.moodle.course.Course;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,20 +38,21 @@ public class MoodleService {
         return user;
     }
 
-    public List<MoodleCourse> getCourses(String token, String userId) {
+    public List<Course> getCourses(String token, String userId) {
         JSONArray array = new JSONArray(client.getUsersCourses(token, userId));
 
-        List<MoodleCourse> courses = new ArrayList<>();
+        List<Course> courses = new ArrayList<>();
 
         try {
             for (int i = 0; i < array.length(); i++) {
                 JSONObject jsonObject = array.getJSONObject(i);
-                MoodleCourse course = new MoodleCourse();
 
-                course.setId(jsonObject.getInt("id"));
-                course.setName(jsonObject.getString("shortname"));
-
-                courses.add(course);
+                courses.add(new Course(
+                        jsonObject.getInt("id"),
+                        jsonObject.getString("displayname"),
+                        jsonObject.getLong("startdate"),
+                        jsonObject.getLong("enddate")
+                ));
             }
         } catch (Exception e) {
             TeleMoodleApplication.LOGGER.error("""
@@ -64,19 +65,18 @@ public class MoodleService {
         return courses;
     }
 
-
-
-    public MoodleCourse getCourseByID(String token, String userId, String courseId) {
+    public Course getCourseByID(String token, String courseId) {
         JSONObject courseJson = new JSONObject(client.getCourseByID(token, courseId))
                 .getJSONArray("courses")
                 .getJSONObject(0);
 
-        MoodleCourse course = new MoodleCourse();
-
         try {
-            course.setId(courseJson.getInt("id"));
-            course.setName(courseJson.getString("shortname"));
-            course.setGrades(getCourseGrades(token, userId, String.valueOf(course.getId())));
+            return new Course(
+                    courseJson.getInt("id"),
+                    courseJson.getString("displayname"),
+                    courseJson.getLong("startdate"),
+                    courseJson.getLong("enddate")
+            );
         } catch (Exception e) {
             TeleMoodleApplication.LOGGER.error("""
                     Something went wrong when getting course by ID! Here's some info about it:
@@ -85,35 +85,30 @@ public class MoodleService {
                     courseJson, e.getMessage());
         }
 
-        return course;
+        return null;
     }
 
+    public List<Grade> getCourseGrades(String token, String userId, String courseId) {
+        JSONObject userGradesObject = new JSONObject(
+                client.getCourseGrades(token, userId, courseId)).getJSONArray("usergrades").getJSONObject(0
+        );
 
-    private List<MoodleGrade> getCourseGrades(String token, String userId, String courseId) {
-        JSONArray gradeItems = new JSONObject(client.getCourseGrades(token, userId, courseId))
-                .getJSONArray("usergrades")
-                .getJSONObject(0)
-                .getJSONArray("gradeitems");
+        JSONArray gradeItems = userGradesObject.getJSONArray("gradeitems");
 
-        TeleMoodleApplication.LOGGER.info(String.valueOf(gradeItems));
-
-        List<MoodleGrade> grades = new ArrayList<>();
+        List<Grade> grades = new ArrayList<>();
 
         try {
             for (int i = 0; i < gradeItems.length(); i++) {
-                MoodleGrade grade = new MoodleGrade();
                 JSONObject gradeJson = gradeItems.getJSONObject(i);
 
-                grade.setId(gradeJson.getInt("id"));
-                grade.setName(gradeJson.getString("itemname"));
-
-                if (!gradeJson.isNull("graderaw")) {
-                    grade.setRaw(gradeJson.getLong("graderaw"));
-                } else {
-                    grade.setRaw(0);
-                }
-
-                grades.add(grade);
+                grades.add(
+                        new Grade(
+                                gradeJson.getInt("id"),
+                                gradeJson.getString("itemname"),
+                                gradeJson.isNull("graderaw") ? 0 : gradeJson.getLong("graderaw"),
+                                getCourseByID(token, String.valueOf(userGradesObject.getInt("courseid")))
+                        )
+                );
             }
         } catch (Exception e) {
             TeleMoodleApplication.LOGGER.error("""
@@ -126,45 +121,43 @@ public class MoodleService {
         return grades;
     }
 
-        public List<MoodleDeadline> getAllDeadlines(String token) {
+    public List<Deadline> getAllDeadlines(String token) {
+        JSONObject deadlinesJson = new JSONObject(client.getAllDeadlines(token));
+        List<Deadline> deadlines = new ArrayList<>();
 
-            JSONObject deadlinesJson = new JSONObject(client.getAllDeadlines(token));
+        try {
+            JSONArray events = deadlinesJson.getJSONArray("events");
 
-            List<MoodleDeadline> deadlines = new ArrayList<>();
+            for (int i = 0; i < events.length(); i++) {
+                JSONObject event = events.getJSONObject(i);
 
-            try {
-                JSONArray events = deadlinesJson.getJSONArray("events");
+                // Why moodle includes a whole course object along with an event object???
+                JSONObject course = event.getJSONObject("course");
 
-                for (int i = 0; i < events.length(); i++) {
-                    JSONObject event = events.getJSONObject(i);
+                if (!event.has("maxdaytimestamp")) continue;
 
-                    MoodleDeadline deadline = new MoodleDeadline();
-
-                    deadline.setAssignmentName(event.getString("name"));
-                    deadline.setIsLastDay(event.getBoolean("islastday"));
-
-                    if (event.has("maxdaytimestamp")) {
-                        deadline.setTimeEnd(event.getLong("timesort"));
-                    } else {
-                        deadline.setTimeEnd(0);
-                    }
-
-                    JSONObject courseJson = event.getJSONObject("course");
-                    MoodleCourse course = new MoodleCourse();
-                    course.setId(courseJson.getInt("id"));
-                    course.setName(courseJson.getString("shortname"));
-                    deadline.setCourse(course);
-
-                    deadlines.add(deadline);
-                }
-            } catch (Exception e) {
-                TeleMoodleApplication.LOGGER.error("""
-                    Something went wrong when getting deadlines! Here's some info about it:
-                    JSON returned from Moodle: {},
-                    exception message: {}""",
-                        deadlinesJson, e.getMessage());
+                deadlines.add(
+                        new Deadline(
+                                event.getString("name"),
+                                event.getLong("timesort"),
+                                event.getBoolean("islastday"),
+                                new Course(
+                                        course.getInt("id"),
+                                        course.getString("fullnamedisplay"),
+                                        course.getLong("startdate"),
+                                        course.getLong("enddate")
+                                )
+                        )
+                );
             }
-
-            return deadlines;
+        } catch (Exception e) {
+            TeleMoodleApplication.LOGGER.error("""
+                   Something went wrong when getting deadlines! Here's some info about it:
+                   JSON returned from Moodle: {},
+                   exception message: {}""",
+                    deadlinesJson, e.getMessage());
         }
+
+        return deadlines;
+    }
 }
