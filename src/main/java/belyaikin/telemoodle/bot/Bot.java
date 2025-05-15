@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -43,21 +44,44 @@ public class Bot extends TelegramLongPollingBot {
             long chatId = update.getMessage().getChatId();
             long userId = update.getMessage().getFrom().getId();
 
-            if (!userService.isUserRegistered(userId)) {
-                startRegistrationProcess(message, chatId, userId);
-                return;
-            }
-
             switch (message) {
+                case "/start":
+                    if (!userService.isUserRegistered(userId)) {
+                        sendRegularMessage(chatId,
+                                """
+                                        Hello! 👋
+                                        It looks like you are texting me for the first time.
+                                        
+                                        Please send me your Moodle token, so I can get information from Moodle.
+                                        
+                                        ReMoodle team has written a pretty clear instruction of how to obtain it.
+                                        https://ext.remoodle.app/find-token"""
+                        );
+                    } else {
+                        sendRegularMessage(chatId,
+                                "Click the menu button near the text input field to show available commands 😊"
+                        );
+                    }
+                    break;
                 case "/courses":
+                    if (!userService.isUserRegistered(userId)) {
+                        sendRegularMessage(chatId,
+                                "❌ You are not registered yet. Please send me a Moodle key."
+                        );
+                    }
                     showAvailableCourseOptions(chatId);
                     break;
                 case "/deadlines":
+                    if (!userService.isUserRegistered(userId)) {
+                        sendRegularMessage(chatId,
+                                "❌ You are not registered yet. Please send me a Moodle key."
+                        );
+                    }
                     showDeadlines(chatId, userId);
                     break;
                 default:
                     if (!userService.isUserRegistered(userId)) {
-                        startRegistrationProcess(message, chatId, userId);
+                        checkToken(message, chatId, userId);
                     } else {
                         sendRegularMessage(chatId,
                                 "Click the menu button near the text input field to show available commands 😊"
@@ -73,18 +97,7 @@ public class Bot extends TelegramLongPollingBot {
         }
     }
 
-    private void startRegistrationProcess(String message, long chatId, long userId) {
-        sendRegularMessage(chatId,
-                """
-                        Hello! 👋
-                        It looks like you are texting me for the first time.
-                        
-                        Please send me your Moodle token, so I can get information from Moodle.
-                        
-                        ReMoodle team has written a pretty clear instruction of how to obtain it.
-                        https://ext.remoodle.app/find-token"""
-        );
-
+    private void checkToken(String message, long chatId, long userId) {
         if(message.length() != 32) {
             sendRegularMessage(chatId, "❌ I think this token is invalid! Please send me a valid Moodle key.");
             return;
@@ -105,13 +118,14 @@ public class Bot extends TelegramLongPollingBot {
     private void processCallbackQuery(CallbackQuery callbackQuery) {
         String callbackData = callbackQuery.getData();
         long chatIdCallback = callbackQuery.getMessage().getChatId();
+        int messageIdCallback = callbackQuery.getMessage().getMessageId();
         long userIdCallback = callbackQuery.getFrom().getId();
 
         String token = userService.getByTelegramId(userIdCallback).getMoodleToken();
         MoodleUser user = moodleService.getMoodleUser(token);
 
         if (callbackData.equals("all_courses")) {
-            listAllCourses(chatIdCallback, token, user.getUserId());
+            listAllCourses(chatIdCallback, messageIdCallback, token, user.getUserId());
         } else {
             // If callback data equals course id. Refactor this!
             Course course = moodleService.getCourseByID(token, callbackData);
@@ -162,17 +176,32 @@ public class Bot extends TelegramLongPollingBot {
                 res.append("No grades available.");
             }
 
-            sendRegularMessage(chatIdCallback, String.valueOf(res));
+            changeMessage(chatIdCallback, messageIdCallback, res.toString());
         }
     }
 
-    private void listAllCourses(long chatId, String token, int userId) {
+    private void changeMessage(long chatId, int messageId, String newText) {
+        EditMessageText newMessage = new EditMessageText();
+
+        newMessage.setChatId(chatId);
+        newMessage.setMessageId(messageId);
+        newMessage.setText(newText);
+
+        try {
+            execute(newMessage);
+        } catch (TelegramApiException e) {
+            TeleMoodleApplication.LOGGER.error("Something went wrong when editing a message: {}", e.getMessage());;
+        }
+    }
+
+    private void listAllCourses(long chatId, int messageId, String token, int userId) {
         List<Course> courses = moodleService.getCourses(token, String.valueOf(userId));
 
         List<List<InlineKeyboardButton>> courseButtonsRows = new ArrayList<>();
 
-        SendMessage msg = new SendMessage();
+        EditMessageText msg = new EditMessageText();
         msg.setChatId(String.valueOf(chatId));
+        msg.setMessageId(messageId);
         msg.setText("Here are all your courses:");
 
         for (Course course : courses) {
@@ -265,5 +294,4 @@ public class Bot extends TelegramLongPollingBot {
 
         sendRegularMessage(chatId, messageText.toString());
     }
-
 }
