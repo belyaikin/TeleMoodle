@@ -2,10 +2,7 @@ package belyaikin.telemoodle.service;
 
 import belyaikin.telemoodle.TeleMoodleApplication;
 import belyaikin.telemoodle.client.MoodleClient;
-import belyaikin.telemoodle.model.moodle.MoodleCourse;
-import belyaikin.telemoodle.model.moodle.MoodleDeadline;
-import belyaikin.telemoodle.model.moodle.MoodleGrade;
-import belyaikin.telemoodle.model.moodle.MoodleUser;
+import belyaikin.telemoodle.model.moodle.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,20 +35,21 @@ public class MoodleService {
         return user;
     }
 
-    public List<MoodleCourse> getCourses(String token, String userId) {
+    public List<CourseInformation> getCourses(String token, String userId) {
         JSONArray array = new JSONArray(client.getUsersCourses(token, userId));
 
-        List<MoodleCourse> courses = new ArrayList<>();
+        List<CourseInformation> courses = new ArrayList<>();
 
         try {
             for (int i = 0; i < array.length(); i++) {
                 JSONObject jsonObject = array.getJSONObject(i);
-                MoodleCourse course = new MoodleCourse();
 
-                course.setId(jsonObject.getInt("id"));
-                course.setName(jsonObject.getString("shortname"));
-
-                courses.add(course);
+                courses.add(new CourseInformation(
+                        jsonObject.getInt("id"),
+                        jsonObject.getString("displayname"),
+                        jsonObject.getLong("startdate"),
+                        jsonObject.getLong("enddate")
+                ));
             }
         } catch (Exception e) {
             TeleMoodleApplication.LOGGER.error("""
@@ -64,17 +62,18 @@ public class MoodleService {
         return courses;
     }
 
-    public MoodleCourse getCourseByID(String token, String userId, String courseId) {
+    public CourseInformation getCourseByID(String token, String courseId) {
         JSONObject courseJson = new JSONObject(client.getCourseByID(token, courseId))
                 .getJSONArray("courses")
                 .getJSONObject(0);
 
-        MoodleCourse course = new MoodleCourse();
-
         try {
-            course.setId(courseJson.getInt("id"));
-            course.setName(courseJson.getString("shortname"));
-            course.setGrades(getCourseGrades(token, userId, String.valueOf(course.getId())));
+            return new CourseInformation(
+                    courseJson.getInt("id"),
+                    courseJson.getString("displayname"),
+                    courseJson.getLong("startdate"),
+                    courseJson.getLong("enddate")
+            );
         } catch (Exception e) {
             TeleMoodleApplication.LOGGER.error("""
                     Something went wrong when getting course by ID! Here's some info about it:
@@ -83,32 +82,28 @@ public class MoodleService {
                     courseJson, e.getMessage());
         }
 
-        return course;
+        return null;
     }
 
-    private List<MoodleGrade> getCourseGrades(String token, String userId, String courseId) {
+    public List<CourseGrade> getCourseGrades(String token, String userId, String courseId) {
         JSONArray gradeItems = new JSONObject(client.getCourseGrades(token, userId, courseId))
                 .getJSONArray("usergrades")
                 .getJSONObject(0)
                 .getJSONArray("gradeitems");
 
-        List<MoodleGrade> grades = new ArrayList<>();
+        List<CourseGrade> grades = new ArrayList<>();
 
         try {
             for (int i = 0; i < gradeItems.length(); i++) {
-                MoodleGrade grade = new MoodleGrade();
                 JSONObject gradeJson = gradeItems.getJSONObject(i);
 
-                grade.setId(gradeJson.getInt("id"));
-                grade.setName(gradeJson.getString("itemname"));
-
-                if (!gradeJson.isNull("graderaw")) {
-                    grade.setRaw(gradeJson.getLong("graderaw"));
-                } else {
-                    grade.setRaw(0);
-                }
-
-                grades.add(grade);
+                grades.add(
+                        new CourseGrade(
+                                gradeJson.getInt("id"),
+                                gradeJson.getString("itemname"),
+                                gradeJson.isNull("graderaw") ? 0 : gradeJson.getLong("graderaw")
+                        )
+                );
             }
         } catch (Exception e) {
             TeleMoodleApplication.LOGGER.error("""

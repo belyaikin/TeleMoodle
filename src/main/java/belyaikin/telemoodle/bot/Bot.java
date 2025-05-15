@@ -2,10 +2,7 @@ package belyaikin.telemoodle.bot;
 
 import belyaikin.telemoodle.TeleMoodleApplication;
 import belyaikin.telemoodle.model.User;
-import belyaikin.telemoodle.model.moodle.MoodleCourse;
-import belyaikin.telemoodle.model.moodle.MoodleDeadline;
-import belyaikin.telemoodle.model.moodle.MoodleGrade;
-import belyaikin.telemoodle.model.moodle.MoodleUser;
+import belyaikin.telemoodle.model.moodle.*;
 import belyaikin.telemoodle.service.MoodleService;
 import belyaikin.telemoodle.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +40,11 @@ public class Bot extends TelegramLongPollingBot {
             long chatId = update.getMessage().getChatId();
             long userId = update.getMessage().getFrom().getId();
 
+            if (!userService.isUserRegistered(userId)) {
+                startRegistrationProcess(message, chatId, userId);
+                return;
+            }
+
             switch (message) {
                 case "/courses":
                     showAvailableCourseOptions(chatId);
@@ -64,7 +66,7 @@ public class Bot extends TelegramLongPollingBot {
         } else if (update.hasCallbackQuery()) {
             processCallbackQuery(update.getCallbackQuery());
         } else {
-            sendRegularMessage(update.getMessage().getChatId(), "Please try send an available command.");
+            sendRegularMessage(update.getMessage().getChatId(), "Something is wrong, I can feel it...");
         }
     }
 
@@ -108,7 +110,8 @@ public class Bot extends TelegramLongPollingBot {
         if (callbackData.equals("all_courses")) {
             listAllCourses(chatIdCallback, token, user.getUserId());
         } else {
-            MoodleCourse course = moodleService.getCourseByID(token, String.valueOf(user.getUserId()), callbackData);
+            // If callback data equals course id. Refactor this!
+            CourseInformation course = moodleService.getCourseByID(token, callbackData);
 
             MoodleUser student = moodleService.getMoodleUser(token);
 
@@ -119,13 +122,13 @@ public class Bot extends TelegramLongPollingBot {
             String attendance = "";
             boolean hasGrades = false;
 
-            res.append("Student: \n").append(student.getFirstName() + " ").append(student.getLastName() + "\n\n");
+            res.append("Student: \n").append(student.getFirstName()).append(" ").append(student.getLastName()).append("\n\n");
 
-            res.append("Course name:\n").append(course.getName()).append("\n\n");
+            res.append("Course name:\n").append(course.name()).append("\n\n");
 
-            for (MoodleGrade grade : course.getGrades()) {
-                String name = grade.getName();
-                long raw = grade.getRaw();
+            for (CourseGrade grade : moodleService.getCourseGrades(token, String.valueOf(user.getUserId()), String.valueOf(course.id()))) {
+                String name = grade.name();
+                long raw = grade.raw();
 
                 if (name == null || name.isBlank()) continue;
 
@@ -161,7 +164,7 @@ public class Bot extends TelegramLongPollingBot {
     }
 
     private void listAllCourses(long chatId, String token, int userId) {
-        List<MoodleCourse> courses = moodleService.getCourses(token, String.valueOf(userId));
+        List<CourseInformation> courses = moodleService.getCourses(token, String.valueOf(userId));
 
         List<List<InlineKeyboardButton>> courseButtonsRows = new ArrayList<>();
 
@@ -169,12 +172,12 @@ public class Bot extends TelegramLongPollingBot {
         msg.setChatId(String.valueOf(chatId));
         msg.setText("Here are all your courses:");
 
-        for (MoodleCourse course : courses) {
+        for (CourseInformation course : courses) {
             List<InlineKeyboardButton> courseButtonsRow = new ArrayList<>();
 
             InlineKeyboardButton courseButton = new InlineKeyboardButton();
-            courseButton.setText(course.getName());
-            courseButton.setCallbackData(String.valueOf(course.getId()));
+            courseButton.setText(course.name());
+            courseButton.setCallbackData(String.valueOf(course.id()));
 
             courseButtonsRow.add(courseButton);
             courseButtonsRows.add(courseButtonsRow);
