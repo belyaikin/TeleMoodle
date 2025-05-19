@@ -1,8 +1,6 @@
 package belyaikin.telemoodle.bot;
 
 import belyaikin.telemoodle.TeleMoodleApplication;
-import belyaikin.telemoodle.service.MoodleService;
-import belyaikin.telemoodle.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -13,9 +11,6 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 @Component
 public class Bot extends TelegramLongPollingBot {
-    @Autowired private UserService userService;
-    @Autowired private MoodleService moodleService;
-
     @Autowired private MessageHandler messageHandler;
 
     public Bot(@Value("${bot.token}") String botToken) {

@@ -12,4 +12,5 @@ public final class Messages {
     public static final String CLICK_MENU_TO_VIEW_COMMANDS = "Click the menu button near the text input field to show available commands 😊";
     public static final String WRONG_COMMAND = "❌ Invalid command. Click the menu button near the text input field to show available commands";
     public static final String NOT_IMPLEMENTED = "skibidi sigma pomni digital fortnite chamba free gigachad rizz omaiga";
+    public static final String HERE_IS_ALL_YOUR_COURSES = "Here is all your courses:";
 }

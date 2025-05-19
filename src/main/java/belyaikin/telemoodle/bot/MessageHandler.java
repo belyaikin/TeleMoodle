@@ -1,6 +1,8 @@
 package belyaikin.telemoodle.bot;
 
 import belyaikin.telemoodle.bot.command.Command;
+import belyaikin.telemoodle.bot.command.CoursesCommand;
+import belyaikin.telemoodle.bot.command.DeadlinesCommand;
 import belyaikin.telemoodle.bot.command.StartCommand;
 import belyaikin.telemoodle.bot.lang.Messages;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,8 +16,16 @@ import java.util.Map;
 public class MessageHandler {
     private final Map<String, Command> commands;
 
-    public MessageHandler(@Autowired StartCommand startCommand) {
-        this.commands = Map.of("/start", startCommand);
+    public MessageHandler(
+            @Autowired StartCommand startCommand,
+            @Autowired CoursesCommand coursesCommand,
+            @Autowired DeadlinesCommand deadlinesCommand
+    ) {
+        this.commands = Map.of(
+                        "/start", startCommand,
+                        "/courses", coursesCommand,
+                        "/deadlines", deadlinesCommand
+                );
     }
 
     public SendMessage handleCommand(Update update) {
