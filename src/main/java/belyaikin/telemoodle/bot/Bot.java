@@ -141,7 +141,10 @@ public class Bot extends TelegramLongPollingBot {
 
             res.append("Student: \n").append(student.getFirstName()).append(" ").append(student.getLastName()).append("\n\n");
 
-            res.append("Course name:\n").append(course.name()).append("\n\n");
+            res.append("Course:\n").append(course.name())
+                    .append("\n")
+                    .append("Teacher: ").append(course.teacher())
+                    .append("\n\n");
 
             for (Grade grade : moodleService.getCourseGrades(token, String.valueOf(user.getUserId()), String.valueOf(course.id()))) {
                 String name = grade.name();

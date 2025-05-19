@@ -47,9 +47,14 @@ public class MoodleService {
             for (int i = 0; i < array.length(); i++) {
                 JSONObject jsonObject = array.getJSONObject(i);
 
+                String[] displayName = jsonObject.getString("displayname").split("\\|");
+                String courseName = displayName[0];
+                String teacher = displayName[1];
+
                 courses.add(new Course(
                         jsonObject.getInt("id"),
-                        jsonObject.getString("displayname"),
+                        courseName,
+                        teacher,
                         jsonObject.getLong("startdate"),
                         jsonObject.getLong("enddate")
                 ));
@@ -71,9 +76,14 @@ public class MoodleService {
                 .getJSONObject(0);
 
         try {
+            String[] displayName = courseJson.getString("displayname").split("\\|");
+            String courseName = displayName[0];
+            String teacher = displayName[1];
+
             return new Course(
                     courseJson.getInt("id"),
-                    courseJson.getString("displayname"),
+                    courseName,
+                    teacher,
                     courseJson.getLong("startdate"),
                     courseJson.getLong("enddate")
             );
@@ -136,6 +146,10 @@ public class MoodleService {
 
                 if (!event.has("maxdaytimestamp")) continue;
 
+                String[] displayName = course.getString("fullnamedisplay").split("\\|");
+                String courseName = displayName[0];
+                String teacher = displayName[1];
+
                 deadlines.add(
                         new Deadline(
                                 event.getString("name"),
@@ -143,7 +157,8 @@ public class MoodleService {
                                 event.getBoolean("islastday"),
                                 new Course(
                                         course.getInt("id"),
-                                        course.getString("fullnamedisplay"),
+                                        courseName,
+                                        teacher,
                                         course.getLong("startdate"),
                                         course.getLong("enddate")
                                 )
