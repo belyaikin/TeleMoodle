@@ -11,7 +11,8 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 @Component
 public class Bot extends TelegramLongPollingBot {
-    @Autowired private MessageHandler messageHandler;
+    @Autowired private MessagesHandler messagesHandler;
+    @Autowired private CallbacksHandler callbacksHandler;
 
     public Bot(@Value("${bot.token}") String botToken) {
         super(botToken);
@@ -26,10 +27,10 @@ public class Bot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
             if (update.getMessage().getText().startsWith("/")) {
-                sendMessage(messageHandler.handleCommand(update));
+                sendMessage(messagesHandler.handleCommand(update));
             }
-            else {
-                sendMessage(messageHandler.handleText(update));
+            else if (update.hasCallbackQuery()) {
+                sendMessage(callbacksHandler.handleCallbacks(update));
             }
         }
     }

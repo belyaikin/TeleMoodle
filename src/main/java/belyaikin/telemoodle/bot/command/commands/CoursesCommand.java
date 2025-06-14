@@ -1,11 +1,14 @@
-package belyaikin.telemoodle.bot.command;
+package belyaikin.telemoodle.bot.command.commands;
 
+import belyaikin.telemoodle.bot.callback.CallbackType;
+import belyaikin.telemoodle.bot.command.Command;
 import belyaikin.telemoodle.bot.lang.Messages;
 import belyaikin.telemoodle.model.User;
 import belyaikin.telemoodle.model.moodle.MoodleUser;
 import belyaikin.telemoodle.model.moodle.course.Course;
 import belyaikin.telemoodle.service.MoodleService;
 import belyaikin.telemoodle.service.UserService;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -39,7 +42,12 @@ public class CoursesCommand implements Command {
 
             InlineKeyboardButton courseButton = new InlineKeyboardButton();
             courseButton.setText(course.name());
-            courseButton.setCallbackData(String.valueOf(course.id()));
+
+            JSONObject data = new JSONObject();
+            data.append("type", CallbackType.COURSE_ID);
+            data.append("value", course.id());
+
+            courseButton.setCallbackData(data.toString());
 
             courseButtonsRow.add(courseButton);
             courseButtonsRows.add(courseButtonsRow);

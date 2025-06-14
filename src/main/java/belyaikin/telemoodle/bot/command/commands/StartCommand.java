@@ -1,5 +1,6 @@
-package belyaikin.telemoodle.bot.command;
+package belyaikin.telemoodle.bot.command.commands;
 
+import belyaikin.telemoodle.bot.command.Command;
 import belyaikin.telemoodle.bot.lang.Messages;
 import belyaikin.telemoodle.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;

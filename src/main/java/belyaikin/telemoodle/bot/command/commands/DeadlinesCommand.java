@@ -1,7 +1,7 @@
-package belyaikin.telemoodle.bot.command;
+package belyaikin.telemoodle.bot.command.commands;
 
+import belyaikin.telemoodle.bot.command.Command;
 import belyaikin.telemoodle.model.User;
-import belyaikin.telemoodle.model.moodle.MoodleUser;
 import belyaikin.telemoodle.model.moodle.course.Deadline;
 import belyaikin.telemoodle.service.MoodleService;
 import belyaikin.telemoodle.service.UserService;

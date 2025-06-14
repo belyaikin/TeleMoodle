@@ -1,9 +1,9 @@
 package belyaikin.telemoodle.bot;
 
 import belyaikin.telemoodle.bot.command.Command;
-import belyaikin.telemoodle.bot.command.CoursesCommand;
-import belyaikin.telemoodle.bot.command.DeadlinesCommand;
-import belyaikin.telemoodle.bot.command.StartCommand;
+import belyaikin.telemoodle.bot.command.commands.CoursesCommand;
+import belyaikin.telemoodle.bot.command.commands.DeadlinesCommand;
+import belyaikin.telemoodle.bot.command.commands.StartCommand;
 import belyaikin.telemoodle.bot.lang.Messages;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -13,10 +13,10 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import java.util.Map;
 
 @Component
-public class MessageHandler {
+public class MessagesHandler {
     private final Map<String, Command> commands;
 
-    public MessageHandler(
+    public MessagesHandler(
             @Autowired StartCommand startCommand,
             @Autowired CoursesCommand coursesCommand,
             @Autowired DeadlinesCommand deadlinesCommand
