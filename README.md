@@ -1,6 +1,9 @@
 # TeleMoodle
-A small telegram bot that shows deadlines and assignments. Currently in early and heavy development stage.
 
+# Archival notice
+AITU has closed access for Moodle webservices, making it difficult for 3rd party applications like TeleMoodle to get data from Moodle.
+
+# Description
 This bot uses PostgreSQL as a database to store Moodle tokens and Telegram IDs and okHttp to interact with Moodle API.
 
 To build this thing just import it in IntellijIdea and in Run/Debug configuration write down these env. variables:
